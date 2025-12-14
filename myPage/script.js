@@ -110,6 +110,7 @@
 
   function flipToFront(index){
     if(busy) return Promise.resolve(false);
+    if(lockFlip[index]) return Promise.resolve(false);
     const p = panels[index];
     const front = p.querySelector('.face.front');
     const backEl = p.querySelector('.face.back');
@@ -152,11 +153,10 @@
       destBack.style.transition = 'none';
       // force back to shown state immediately
       setPanelFace(index, true);
-      // restore transitions next frame so later flips animate normally
-      requestAnimationFrame(()=>{
-        destFront.style.transition = `transform ${FLIP_TIME}ms linear`;
-        destBack.style.transition = `transform ${FLIP_TIME}ms linear`;
-      });
+      // Keep face transitions disabled during the slide so no flip animation
+      // appears while panelsEl is animating. Restore face transitions after
+      // the slide completes (SLIDE_TIME) so future flips animate normally.
+      // Restoration is scheduled below after the slide promise resolves.
     } else {
       // If sliding forward (down direction), always show the front on arrival to avoid
       // unexpected "back" appearance when returning to a panel that previously had its back revealed.
@@ -196,6 +196,15 @@
           setTimeout(()=>{ lockFlip[current] = false; }, 120);
         }
         busy = false;
+        // If we had disabled face transitions for targetShowBack, restore them now
+        if(targetShowBack){
+          const dst = panels[current];
+          const dstF = dst.querySelector('.face.front');
+          const dstB = dst.querySelector('.face.back');
+          // restore transitions for future flips
+          dstF.style.transition = `transform ${FLIP_TIME}ms linear`;
+          dstB.style.transition = `transform ${FLIP_TIME}ms linear`;
+        }
         res(true);
       }, SLIDE_TIME);
     });
@@ -220,6 +229,9 @@
   updatePanelSizeFromImages();
 
   function handleDelta(deltaY){
+    // If an animation (flip/slide) is in progress, ignore input to avoid
+    // triggering additional flips/slides from residual wheel/touch events.
+    if(busy) return;
     // positive -> down, negative -> up
     accumulating += deltaY;
     // Down
