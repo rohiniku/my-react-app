@@ -1,5 +1,6 @@
 (()=>{
-  const PANEL_SIZE = 500; // px — images are 500x500
+  let PANEL_WIDTH = 500; // px default — updated from first image
+  let PANEL_HEIGHT = 500; // px default — updated from first image
   // Use viewport height percentages for thresholds per request:
   let FLIP_THRESHOLD = window.innerHeight * 0.2; // 20% of screen height
   let SLIDE_THRESHOLD = window.innerHeight * 0.8; // 80% of screen height
@@ -17,6 +18,49 @@
   let busy = false;
 
   function clamp(i){ return Math.max(0, Math.min(i, panels.length-1)); }
+
+  // Read panel size from first image (assume all images same intrinsic size)
+  function updatePanelSizeFromImages(){
+    const viewport = document.querySelector('.viewport');
+    const firstImg = document.querySelector('.panel .face.front img');
+    if(!firstImg) return;
+    function applySize(nw, nh){
+      // compute responsive size that fits within viewport while keeping aspect ratio
+      const maxW = window.innerWidth * 0.9; // allow some padding
+      const maxH = window.innerHeight * 0.9; // avoid full-bleed
+      let targetW = Math.min(nw, maxW);
+      let targetH = targetW * (nh / nw);
+      if(targetH > maxH){
+        targetH = maxH;
+        targetW = targetH * (nw / nh);
+      }
+      // set CSS variables to computed display size
+      document.documentElement.style.setProperty('--panel-width', Math.round(targetW) + 'px');
+      document.documentElement.style.setProperty('--panel-height', Math.round(targetH) + 'px');
+      // update internal displayed sizes
+      PANEL_WIDTH = targetW;
+      PANEL_HEIGHT = targetH;
+      // ensure panels container is positioned to current panel
+      panelsEl.style.transform = `translateY(-${current * PANEL_HEIGHT}px)`;
+    }
+
+    if(firstImg.complete && firstImg.naturalWidth){
+      applySize(firstImg.naturalWidth, firstImg.naturalHeight);
+    } else {
+      firstImg.addEventListener('load', ()=>{
+        applySize(firstImg.naturalWidth, firstImg.naturalHeight);
+      }, {once:true});
+    }
+  }
+
+  // call once on init
+  updatePanelSizeFromImages();
+  // recalc thresholds and panel displayed size on resize
+  window.addEventListener('resize', ()=>{
+    FLIP_THRESHOLD = window.innerHeight * 0.2;
+    SLIDE_THRESHOLD = window.innerHeight * 0.8;
+    updatePanelSizeFromImages();
+  });
 
   function setPanelFace(index, back){
     const p = panels[index];
@@ -93,6 +137,7 @@
     if(busy) return Promise.resolve(false);
     index = clamp(index);
     if(index === current){ return Promise.resolve(false); }
+    const wasForward = index > current;
     busy = true;
     // Prepare the destination panel's face so it is visible during the slide.
     const dest = panels[index];
@@ -113,20 +158,38 @@
         destBack.style.transition = `transform ${FLIP_TIME}ms linear`;
       });
     } else {
-      // ensure the destination has its correct face based on whether its back was revealed
-      setPanelFace(index, revealedBack[index]);
+      // If sliding forward (down direction), always show the front on arrival to avoid
+      // unexpected "back" appearance when returning to a panel that previously had its back revealed.
+      if(wasForward){
+        setPanelFace(index, false);
+      } else {
+        // sliding upward to a panel (without explicit targetShowBack) — respect previous revealed state
+        setPanelFace(index, revealedBack[index]);
+      }
     }
 
     panelsEl.style.transition = `transform ${SLIDE_TIME}ms ease`;
-    panelsEl.style.transform = `translateY(-${index * PANEL_SIZE}px)`;
+    panelsEl.style.transform = `translateY(-${index * PANEL_HEIGHT}px)`;
     return new Promise(res=>{
       setTimeout(()=>{
         current = index;
         // after slide, set face according to whether targetShowBack or previously revealed
-        if(targetShowBack){ revealedBack[current] = true; showingBack = true; }
-        showingBack = revealedBack[current] ? true : false;
-        // ensure faces widths reflect state
-        panels.forEach((p,i)=> setPanelFace(i, revealedBack[i] && i===current ? true : (i===current && showingBack)));
+        if(targetShowBack){
+          revealedBack[current] = true; showingBack = true;
+        } else if(wasForward){
+          // Arrived from forward slide: prefer showing front even if back was seen before
+          showingBack = false;
+        } else {
+          showingBack = revealedBack[current] ? true : false;
+        }
+        // ensure faces reflect state: current panel follows `showingBack`, others show front
+        panels.forEach((p,i)=>{
+          if(i === current){
+            setPanelFace(i, showingBack);
+          } else {
+            setPanelFace(i, false);
+          }
+        });
         // release flip lock after slide completes
         if(lockFlip[current]){
           // small delay so user doesn't immediately trigger flip by residual motion
@@ -153,11 +216,8 @@
 
   function resetAcc(){ accumulating = 0; touchAcc = 0; touchStartY = null; }
 
-  // update thresholds on resize
-  window.addEventListener('resize', ()=>{
-    FLIP_THRESHOLD = window.innerHeight * 0.2;
-    SLIDE_THRESHOLD = window.innerHeight * 0.8;
-  });
+  // initial size read
+  updatePanelSizeFromImages();
 
   function handleDelta(deltaY){
     // positive -> down, negative -> up
