@@ -37,11 +37,12 @@
       // set CSS variables to computed display size
       document.documentElement.style.setProperty('--panel-width', Math.round(targetW) + 'px');
       document.documentElement.style.setProperty('--panel-height', Math.round(targetH) + 'px');
-      // update internal displayed sizes
-      PANEL_WIDTH = targetW;
-      PANEL_HEIGHT = targetH;
+      // update internal displayed sizes (use integer pixels to avoid sub-pixel seams)
+      PANEL_WIDTH = Math.round(targetW);
+      PANEL_HEIGHT = Math.round(targetH);
       // ensure panels container is positioned to current panel
-      panelsEl.style.transform = `translateY(-${current * PANEL_HEIGHT}px)`;
+      const y = Math.round(current * PANEL_HEIGHT);
+      panelsEl.style.transform = `translate3d(0, -${y}px, 0)`;
     }
 
     if(firstImg.complete && firstImg.naturalWidth){
@@ -169,7 +170,9 @@
     }
 
     panelsEl.style.transition = `transform ${SLIDE_TIME}ms ease`;
-    panelsEl.style.transform = `translateY(-${index * PANEL_HEIGHT}px)`;
+    // Use integer pixel translate and translate3d to avoid sub-pixel rendering seams
+    const translateY = Math.round(index * PANEL_HEIGHT);
+    panelsEl.style.transform = `translate3d(0, -${translateY}px, 0)`;
     return new Promise(res=>{
       setTimeout(()=>{
         current = index;
@@ -278,6 +281,9 @@
   }, {passive:true});
   window.addEventListener('touchmove', e=>{
     if(touchStartY === null) return;
+    // Prevent native scrolling on mobile (iOS Safari) while handling gestures
+    // (handler registered with {passive:false} so preventDefault takes effect)
+    e.preventDefault();
     const y = e.touches[0].clientY;
     const delta = touchStartY - y; // positive when swiping up? we want positive for scrolling down in content
     // We define positive as scroll down (finger swipe up -> delta>0). Keep consistent with wheel where deltaY>0 means down.
