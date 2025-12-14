@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panels - myPage</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>/* tiny fallback to ensure page fits */
+    html,body{height:100%;margin:0;padding:0;background:#111;color:#fff}
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <div class="viewport">
+      <div class="panels" id="panels">
+        <!-- Panels: A..E with front/back faces -->
+        <div class="panel" data-name="A">
+          <div class="face front"><img src="img_A0.png" alt="A"></div>
+          <div class="face back"><img src="img_A1.png" alt="a"></div>
+        </div>
+        <div class="panel" data-name="B">
+          <div class="face front"><img src="img_B0.png" alt="B"></div>
+          <div class="face back"><img src="img_B1.png" alt="b"></div>
+        </div>
+        <div class="panel" data-name="C">
+          <div class="face front"><img src="img_C0.png" alt="C"></div>
+          <div class="face back"><img src="img_C1.png" alt="c"></div>
+        </div>
+        <div class="panel" data-name="D">
+          <div class="face front"><img src="img_D0.png" alt="D"></div>
+          <div class="face back"><img src="img_D1.png" alt="d"></div>
+        </div>
+        <div class="panel" data-name="E">
+          <div class="face front"><img src="img_E0.png" alt="E"></div>
+          <div class="face back"><img src="img_E1.png" alt="e"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="script.js" defer></script>
+</body>
+</html>

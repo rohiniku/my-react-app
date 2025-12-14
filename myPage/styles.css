@@ -1,0 +1,21 @@
+:root{--panel-size:500px}
+*{box-sizing:border-box}
+body{font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#111; color:#fff; margin:0; padding:20px; display:flex; align-items:flex-start; justify-content:center}
+.stage{width:100%; display:flex; justify-content:center}
+.viewport{width:var(--panel-size); height:var(--panel-size); overflow:hidden; position:relative; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6); background:#000}
+.panels{position:relative; width:100%; transition:transform 500ms ease; will-change:transform}
+.panel{width:100%; height:var(--panel-size); position:relative}
+.face{position:absolute; top:0; left:50%; width:100%; height:100%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#222; transform-origin:center; will-change:transform}
+.face img{display:block; width:100%; height:100%; object-fit:cover}
+.face.front{z-index:2; transform:translateX(-50%) scaleX(1); transition:transform 200ms linear}
+.face.back{z-index:1; transform:translateX(-50%) scaleX(0); transition:transform 200ms linear}
+
+/* When showing back, swap z-index so it appears on top */
+.panel.showing-back .face.front{z-index:1}
+.panel.showing-back .face.back{z-index:2}
+
+/* small accessibility helper */
+.hint{position:fixed; left:10px; bottom:10px; background:rgba(0,0,0,0.4); padding:8px 10px; border-radius:6px; font-size:13px}
+
+/* Prevent text selection while dragging */
+html.touching, html.dragging{user-select:none}
